@@ -1,133 +1,169 @@
-import { useMemo, useState } from "react";
+import logo from "./logo.svg";
+import "./App.css";
+import { useCallback, useMemo, useState } from "react";
+import {
+  Button,
+  ButtonGroup,
+  Checkbox,
+  Heading,
+  Input,
+  Text,
+} from "@chakra-ui/react";
 
-const sortTypes = ["All", "Completed Tasks", "Active Tasks"];
+const filterTypes = [
+  "Show all task",
+  "Show active tasks",
+  "Show completed tasks",
+]; // Tất cả, Việc cần làm, Việc đã hoàn thành
 
 function App() {
-  const [taskName, setTaskName] = useState("");
-  const [list, setList] = useState([]);
-  const [isEdit, setIsEdit] = useState(false);
-  const [selectedItem, setSelectedItem] = useState({});
-  const [sortType, setSortType] = useState(sortTypes[0]);
+  const [name, setName] = useState("");
+  const [todoList, setTodoList] = useState([]);
+  const [selectedItem, setSelectedItem] = useState();
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedFilterType, setSelectedFilterType] = useState(filterTypes[0]);
 
-  const onChangeTaskName = (e) => {
-    setTaskName(e.target.value);
+  const onChangeName = (e) => {
+    setName(e.target.value);
   };
 
-  const onAddTodoItem = () => {
-    setList((list) => [...list, { name: taskName, isDone: false }]);
-    setTaskName("");
+  const onAddItem = () => {
+    setTodoList((previousList) => {
+      return [...previousList, { name: name, isSuccess: false }];
+    });
+    setName("");
   };
 
-  const onRemoveTodoItem = (selectedItem) => () => {
-    setList((list) => list.filter((item) => item.name !== selectedItem.name));
+  const onDeleteItem = (item) => {
+    setTodoList((previousList) => {
+      const nextList = previousList.filter((value) => {
+        return value.name !== item.name;
+      });
+
+      return nextList;
+    });
   };
 
-  const onToggleTodoItem = (selectedItem) => () => {
-    setList((list) =>
-      list.map((item) => {
-        if (item.name === selectedItem.name) {
-          return { ...item, isDone: !item.isDone };
+  const onDoneItem = (item) => () => {
+    setTodoList((previousList) => {
+      const nextList = previousList.map((value) => {
+        if (value.name === item.name) {
+          const newItem = {
+            name: value.name,
+            isSuccess: !value.isSuccess,
+          };
+          return newItem;
         }
-        return item;
-      })
-    );
+        return value;
+      });
+      return nextList;
+    });
   };
 
-  const toggleEdit = () => {
-    setIsEdit((edit) => !edit);
+  const onEditItem = (item) => {
+    setSelectedItem(item);
+    setIsEditing(true);
+    setName(item.name);
   };
 
-  const onEditItem = (selectedItem) => () => {
-    setSelectedItem(selectedItem);
-    setTaskName(selectedItem.name);
-    toggleEdit();
-  };
-
-  const handleEditItem = () => {
-    setList((list) =>
-      list.map((item) => {
-        if (item.name === selectedItem.name) {
-          return { ...item, name: taskName };
+  const onSaveItem = () => {
+    setTodoList((previousList) => {
+      return previousList.map((value) => {
+        if (value.name === selectedItem.name) {
+          return { ...value, name: name };
         }
-        return item;
-      })
-    );
-    setTaskName("");
-    toggleEdit();
+        return value;
+      });
+    });
+    setName("");
+    setSelectedItem();
+    setIsEditing(false);
   };
 
-  const setSortTypeValue = (sortValue) => () => {
-    setSortType(sortValue);
-  };
-
-  const listData = useMemo(() => {
-    switch (sortType) {
-      case sortTypes[1]:
-        return list.filter((item) => item.isDone === true);
-      case sortTypes[2]:
-        return list.filter((item) => item.isDone === false);
-
+  const onFilterList = () => {
+    switch (selectedFilterType) {
+      case filterTypes[1]:
+        return todoList.filter((value) => value.isSuccess === false);
+      case filterTypes[2]:
+        return todoList.filter((value) => value.isSuccess === true);
       default:
-        return list;
+        return todoList;
     }
-  }, [sortType, list]);
+  };
+
+  const filteredList = onFilterList();
 
   return (
     <div className="App">
-      <h1 className="app-name">Todo Matic</h1>
+      <h1 className="app-name">
+        <img className="App-logo" src={logo} alt="logo" />
+        Todo Matic
+      </h1>
       <h1>What need to be done?</h1>
-      <div>
-        <div>
-          <input value={taskName} onChange={onChangeTaskName} />
-          <button
-            onClick={isEdit ? handleEditItem : onAddTodoItem}
+      <div className={"flex-col"}>
+        <div className="mb-4 flex-row">
+          <Input
+            placeholder="Basic usage"
+            value={name}
+            onChange={onChangeName} // onChange(event);
+          />
+          <Button
+            className="mt-4"
+            onClick={isEditing ? onSaveItem : onAddItem}
             type="primary"
           >
-            {isEdit ? "Save" : "Add"}
-          </button>
+            {isEditing ? "Save" : "Add"}
+          </Button>
         </div>
-        {!isEdit && (
-          <>
-            <div className="padding-button">
-              {sortTypes.map((value) => (
-                <button
-                  key={value}
-                  colorScheme={value === sortType ? "blue" : undefined}
-                  onClick={setSortTypeValue(value)}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
-            <h2>{listData.length} tasks remaining</h2>
-            {listData.map((item, index) => {
-              return (
-                <div key={`${index}-${item.name}`}>
-                  <form action="#">
-                    <div>
-                      <p>
-                        <input
-                          type="checkbox"
-                          id={index}
-                          isChecked={item.isDone}
-                          onChange={onToggleTodoItem(item)}
-                        />
-                        <label for={index} key={index}>
-                          {item.name}
-                        </label>
-                      </p>
-                      <div>
-                        <button onClick={onEditItem(item)}>Edit</button>
-                        <button onClick={onRemoveTodoItem(item)}>Delete</button>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              );
-            })}
-          </>
-        )}
       </div>
+      {filterTypes.map((filterType) => {
+        return (
+          <Button colorScheme={filterType === selectedFilterType ? "teal" : undefined}
+            className={"mr-4"}
+            key={filterType}
+            onClick={() => {
+              setSelectedFilterType(filterType);
+            }}
+          >
+            {filterType}
+          </Button>
+        );
+      })}
+      <Text fontSize="xl">{todoList.length} Tasks remaining</Text>
+      <ul>
+        {filteredList.map((item, index) => {
+          return (
+            <li key={`${index}-${item.name}`} className={"mb-4"}>
+              <div className={"flex-row"}>
+                <input
+                  type={"checkbox"}
+                  checked={item.isSuccess}
+                  onChange={onDoneItem(item)} // onDoneItem(item)(e)
+                />
+                <h3 className={"display-content"}>{item.name}</h3>
+              </div>
+              <div className={"flex-row"}>
+                <Button
+                  className={"mr-4"}
+                  onClick={() => {
+                    onEditItem(item);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  className={"ml-4"}
+                  onClick={() => {
+                    onDeleteItem(item);
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
